@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/posener/complete/v2"
-	"github.com/posener/complete/v2/predict"
+	complete "github.com/posener/complete/v2"
+	predict "github.com/posener/complete/v2/predict"
 )
 
 // envVerbose is the sys env var that controls error output verbosity.
@@ -40,9 +40,9 @@ func main() {
 			"work":          predict.Nothing,
 			"x":             predict.Nothing,
 			"asmflags":      predict.Something,
-			"buildmode":     predict.Something,
-			"compiler":      predict.Something,
-			"gccgoflags":    predict.Set{"gccgo", "gc"},
+			"buildmode":     predict.Set{"archive", "c-archive", "c-shared", "default", "shared", "exe", "pie", "plugin"},
+			"compiler":      predict.Set{"gccgo", "gc"},
+			"gccgoflags":    predict.Something,
 			"gcflags":       predict.Something,
 			"installsuffix": predict.Something,
 			"ldflags":       predict.Something,
@@ -50,6 +50,10 @@ func main() {
 			"pkgdir":        anyPackage,
 			"tags":          predict.Something,
 			"toolexec":      predict.Something,
+			"buildvcs":      predict.Set{"auto", "false", "true"},
+			"mod":           predict.Set{"mod", "readonly", "vendor"},
+			"modfile":       predict.Files("*.mod"),
+			"overlay":       predict.Files("*.json"),
 		},
 		Args: anyGo,
 	}
@@ -93,7 +97,7 @@ func main() {
 		Args: anyGo,
 	}
 
-	fmt := &complete.Command{
+	fmtCmd := &complete.Command{
 		Flags: map[string]complete.Predictor{
 			"n": predict.Nothing,
 			"x": predict.Nothing,
@@ -154,6 +158,16 @@ func main() {
 			"n": predict.Nothing,
 		},
 		Sub: map[string]*complete.Command{
+			"api": {
+				Flags: map[string]complete.Predictor{
+					"allow_new": predict.Nothing,
+					"c":         predict.Something,
+					"contexts":  predict.Something,
+					"except":    predict.Something,
+					"next":      predict.Something,
+				},
+				Args: anyFile,
+			},
 			"addr2line": {
 				Args: anyFile,
 			},
@@ -171,6 +185,12 @@ func main() {
 					"trimpath": predict.Nothing,
 				},
 				Args: predict.Files("*.s"),
+			},
+			"buildid": {
+				Flags: map[string]complete.Predictor{
+					"w": predict.Nothing,
+				},
+				Args: anyFile,
 			},
 			"cgo": {
 				Flags: map[string]complete.Predictor{
@@ -364,41 +384,95 @@ func main() {
 			},
 			"pprof": {
 				Flags: map[string]complete.Predictor{
-					"callgrind":     predict.Nothing,
-					"disasm":        predict.Something,
-					"dot":           predict.Nothing,
-					"eog":           predict.Nothing,
-					"evince":        predict.Nothing,
-					"gif":           predict.Nothing,
-					"gv":            predict.Nothing,
-					"list":          predict.Something,
-					"pdf":           predict.Nothing,
-					"peek":          predict.Something,
-					"png":           predict.Nothing,
-					"proto":         predict.Nothing,
-					"ps":            predict.Nothing,
-					"raw":           predict.Nothing,
-					"svg":           predict.Nothing,
-					"tags":          predict.Nothing,
-					"text":          predict.Nothing,
-					"top":           predict.Nothing,
-					"tree":          predict.Nothing,
-					"web":           predict.Nothing,
-					"weblist":       predict.Something,
-					"output":        anyFile,
+					// Output formats
+					"callgrind":   predict.Nothing,
+					"comments":    predict.Nothing,
+					"disasm":      predict.Nothing,
+					"dot":         predict.Nothing,
+					"eog":         predict.Nothing,
+					"evince":      predict.Nothing,
+					"gif":         predict.Nothing,
+					"gv":          predict.Nothing,
+					"kcachegrind": predict.Nothing,
+					"list":        predict.Nothing,
+					"pdf":         predict.Nothing,
+					"peek":        predict.Nothing,
+					"png":         predict.Nothing,
+					"proto":       predict.Nothing,
+					"ps":          predict.Nothing,
+					"raw":         predict.Nothing,
+					"svg":         predict.Nothing,
+					"tags":        predict.Nothing,
+					"text":        predict.Nothing,
+					"top":         predict.Nothing,
+					"topproto":    predict.Nothing,
+					"traces":      predict.Nothing,
+					"tree":        predict.Nothing,
+					"web":         predict.Nothing,
+					"weblist":     predict.Nothing,
+
+					// Options
+					"call_tree":            predict.Nothing,
+					"compact_labels":       predict.Nothing,
+					"divide_by":            predict.Nothing,
+					"drop_negative":        predict.Nothing,
+					"edgefraction":         predict.Nothing,
+					"focus":                predict.Nothing,
+					"hide":                 predict.Nothing,
+					"ignore":               predict.Nothing,
+					"intel_syntax":         predict.Nothing,
+					"mean":                 predict.Nothing,
+					"nodecount":            predict.Nothing,
+					"nodefraction":         predict.Nothing,
+					"noinlines":            predict.Nothing,
+					"normalize":            predict.Nothing,
+					"output":               predict.Nothing,
+					"prune_from":           predict.Nothing,
+					"relative_percentages": predict.Nothing,
+					"sample_index":         predict.Nothing,
+					"show":                 predict.Nothing,
+					"show_from":            predict.Nothing,
+					"source_path":          predict.Nothing,
+					"tagfocus":             predict.Nothing,
+					"taghide":              predict.Nothing,
+					"tagignore":            predict.Nothing,
+					"tagleaf":              predict.Nothing,
+					"tagroot":              predict.Nothing,
+					"tagshow":              predict.Nothing,
+					"trim":                 predict.Nothing,
+					"trim_path":            predict.Nothing,
+					"unit":                 predict.Nothing,
+
+					// Option groups (only set one per group):
+
+					// granularity
 					"functions":     predict.Nothing,
+					"filefunctions": predict.Nothing,
 					"files":         predict.Nothing,
 					"lines":         predict.Nothing,
 					"addresses":     predict.Nothing,
-					"base":          predict.Something,
-					"drop_negative": predict.Nothing,
-					"cum":           predict.Nothing,
-					"seconds":       predict.Something,
-					"nodecount":     predict.Something,
-					"nodefraction":  predict.Something,
-					"edgefraction":  predict.Something,
-					"sample_index":  predict.Nothing,
-					"mean":          predict.Nothing,
+					// sort
+					"cum":  predict.Nothing,
+					"flat": predict.Nothing,
+
+					// Source options:
+					"seconds":     predict.Nothing,
+					"timeout":     predict.Nothing,
+					"buildid":     predict.Nothing,
+					"add_comment": predict.Nothing,
+					"diff_base":   predict.Nothing,
+					"base":        predict.Nothing,
+					"symbolize":   predict.Set{"none", "local", "fastlocal", "remote", "force"},
+					"tls_cert":    predict.Nothing,
+					"tls_key":     predict.Nothing,
+					"tls_ca":      predict.Nothing,
+
+					// Misc options:
+					"http":       predict.Nothing,
+					"no_browser": predict.Nothing,
+					"tools":      predict.Dirs("*"),
+
+					// Legacy convenience options:
 					"inuse_space":   predict.Nothing,
 					"inuse_objects": predict.Nothing,
 					"alloc_space":   predict.Nothing,
@@ -406,25 +480,18 @@ func main() {
 					"total_delay":   predict.Nothing,
 					"contentions":   predict.Nothing,
 					"mean_delay":    predict.Nothing,
-					"runtime":       predict.Nothing,
-					"focus":         predict.Something,
-					"ignore":        predict.Something,
-					"tagfocus":      predict.Something,
-					"tagignore":     predict.Something,
-					"call_tree":     predict.Nothing,
-					"unit":          predict.Something,
-					"divide_by":     predict.Something,
-					"buildid":       predict.Something,
-					"tools":         predict.Dirs("*"),
-					"help":          predict.Nothing,
+
+					// Other options:
+					"help": predict.Nothing,
 				},
 				Args: anyFile,
 			},
-			"tour": {
+			"test2json": {
 				Flags: map[string]complete.Predictor{
-					"http":        predict.Something,
-					"openbrowser": predict.Nothing,
+					"p": predict.Nothing,
+					"t": predict.Nothing,
 				},
+				Args: predict.Files("*.test"),
 			},
 			"trace": {
 				Flags: map[string]complete.Predictor{
@@ -685,7 +752,7 @@ func main() {
 			"install":  build, // install and build have the same flags
 			"run":      run,
 			"test":     test,
-			"fmt":      fmt,
+			"fmt":      fmtCmd,
 			"get":      get,
 			"generate": generate,
 			"vet":      vet,
