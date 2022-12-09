@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/posener/complete/v2"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPredictions(t *testing.T) {
@@ -42,9 +43,7 @@ func TestPredictions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.predictor.Predict(tt.prefix)
-			if !equal(got, tt.want) {
-				t.Errorf("Failed %s: got: %q, want: %q", t.Name(), got, tt.want)
-			}
+			assert.Subset(t, got, tt.want)
 		})
 	}
 }

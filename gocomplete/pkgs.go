@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -73,10 +72,7 @@ func listPackages(dir string) (directories []string) {
 
 func systemDirs(dir string) (directories []string) {
 	// get all paths from GOPATH environment variable and use their src directory
-	paths := findGopath()
-	for i := range paths {
-		paths[i] = filepath.Join(paths[i], "src")
-	}
+	paths := build.Default.SrcDirs()
 
 	// normalize the directory to be an actual directory since it could be with an additional
 	// characters after the last '/'.
@@ -86,7 +82,7 @@ func systemDirs(dir string) (directories []string) {
 
 	for _, basePath := range paths {
 		path := filepath.Join(basePath, dir)
-		files, err := ioutil.ReadDir(path)
+		des, err := os.ReadDir(path)
 		if err != nil {
 			// path does not exists
 			continue
@@ -99,31 +95,13 @@ func systemDirs(dir string) (directories []string) {
 		}
 		// add all nested directories of the base path
 		// go supports only packages and not go files within the GOPATH
-		for _, f := range files {
-			if !f.IsDir() {
-				continue
+		for _, d := range des {
+			if d.IsDir() {
+				directories = append(directories, filepath.Join(dir, d.Name())+"/")
 			}
-			directories = append(directories, filepath.Join(dir, f.Name())+"/")
 		}
 	}
 	return
-}
-
-func findGopath() []string {
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		// By convention
-		// See rationale at https://github.com/golang/go/issues/17262
-		usr, err := user.Current()
-		if err != nil {
-			return nil
-		}
-		usrgo := filepath.Join(usr.HomeDir, "go")
-		return []string{usrgo}
-	}
-	listsep := string([]byte{os.PathListSeparator})
-	entries := strings.Split(gopath, listsep)
-	return entries
 }
 
 func directory(prefix string) string {

@@ -1,10 +1,11 @@
 package predict
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
 )
 
 // Dirs returns a predictor that predict directory paths. If a non-empty pattern is given, the
@@ -41,7 +42,22 @@ func (f FilesPredictor) Predict(prefix string) (options []string) {
 		return
 	}
 
-	return f.predictFiles(options[0])
+	return dedupe(f.predictFiles(options[0]))
+}
+
+func dedupe(a []string) []string {
+	if len(a) <= 1 {
+		return a
+	}
+	sort.Strings(a)
+	k := 1
+	for i := 1; i < len(a); i++ {
+		if a[k-1] != a[i] {
+			a[k] = a[i]
+			k++
+		}
+	}
+	return a[:k]
 }
 
 func (f FilesPredictor) predictFiles(prefix string) []string {
@@ -59,30 +75,27 @@ func (f FilesPredictor) predictFiles(prefix string) []string {
 }
 
 func (f FilesPredictor) listFiles(dir string) []string {
-	// Set of all file names.
-	m := map[string]bool{}
-
-	// List files.
-	if files, err := filepath.Glob(filepath.Join(dir, f.pattern)); err == nil {
-		for _, file := range files {
-			if stat, err := os.Stat(file); err != nil || stat.IsDir() || f.includeFiles {
-				m[file] = true
+	var list []string
+	des, _ := os.ReadDir(dir)
+	for _, e := range des {
+		typ := e.Type()
+		name := e.Name()
+		// Resolve the file type of the symlinks target
+		if typ&os.ModeSymlink != 0 {
+			fi, err := os.Stat(dir + string(os.PathSeparator) + name)
+			if err != nil {
+				continue
+			}
+			typ = fi.Mode()
+		}
+		if f.includeFiles && typ.IsRegular() {
+			if ok, _ := filepath.Match(f.pattern, name); ok {
+				list = append(list, filepath.Join(dir, name))
 			}
 		}
-	}
-
-	// List directories.
-	if dirs, err := ioutil.ReadDir(dir); err == nil {
-		for _, d := range dirs {
-			if d.IsDir() {
-				m[filepath.Join(dir, d.Name())] = true
-			}
+		if typ.IsDir() {
+			list = append(list, filepath.Join(dir, name))
 		}
-	}
-
-	list := make([]string, 0, len(m))
-	for k := range m {
-		list = append(list, k)
 	}
 	return list
 }
@@ -103,20 +116,21 @@ func directory(path string) string {
 // FilesSet predict according to file rules to a given fixed set of file names.
 type FilesSet []string
 
-func (s FilesSet) Predict(prefix string) (prediction []string) {
+func (s FilesSet) Predict(prefix string) []string {
+	var matches []string
 	// add all matching files to prediction
 	for _, f := range s {
 		f = fixPathForm(prefix, f)
 
 		// test matching of file to the argument
 		if matchFile(f, prefix) {
-			prediction = append(prediction, f)
+			matches = append(matches, f)
 		}
 	}
-	if len(prediction) == 0 {
+	if len(matches) == 0 {
 		return s
 	}
-	return
+	return matches
 }
 
 // MatchFile returns true if prefix can match the file
@@ -135,10 +149,23 @@ func matchFile(file, prefix string) bool {
 	return strings.HasPrefix(file, prefix)
 }
 
+var _wdOnce struct {
+	sync.Once
+	wd  string
+	err error
+}
+
+func getwd() (string, error) {
+	_wdOnce.Do(func() {
+		_wdOnce.wd, _wdOnce.err = os.Getwd()
+	})
+	return _wdOnce.wd, _wdOnce.err
+}
+
 // fixPathForm changes a file name to a relative name
-func fixPathForm(last string, file string) string {
+func fixPathForm(last, file string) string {
 	// Get wording directory for relative name.
-	workDir, err := os.Getwd()
+	workDir, err := getwd()
 	if err != nil {
 		return file
 	}

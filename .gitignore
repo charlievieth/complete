@@ -2,3 +2,4 @@
 coverage.txt
 gocomplete/gocomplete
 example/self/self
+/vendor

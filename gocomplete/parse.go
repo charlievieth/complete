@@ -8,20 +8,22 @@ import (
 	"regexp"
 )
 
-func functionsInFile(path string, regexp *regexp.Regexp) (tests []string) {
-	fset := token.NewFileSet()
+var fset = token.NewFileSet() // global FileSet
+
+func functionsInFile(path string, regexp *regexp.Regexp) []string {
 	f, err := parser.ParseFile(fset, path, nil, 0)
 	if err != nil {
 		log.Printf("Failed parsing %s: %s", path, err)
 		return nil
 	}
+	var names []string
 	for _, d := range f.Decls {
-		if f, ok := d.(*ast.FuncDecl); ok {
+		if f, ok := d.(*ast.FuncDecl); ok && f != nil && f.Name != nil {
 			name := f.Name.String()
 			if regexp == nil || regexp.MatchString(name) {
-				tests = append(tests, name)
+				names = append(names, name)
 			}
 		}
 	}
-	return
+	return names
 }
