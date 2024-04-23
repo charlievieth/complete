@@ -129,8 +129,13 @@ func main() {
 
 	vet := &complete.Command{
 		Flags: map[string]complete.Predictor{
-			"n": predict.Nothing,
-			"x": predict.Nothing,
+			"C":        predict.Nothing,
+			"n":        predict.Nothing,
+			"tags":     predict.Nothing,
+			"toolexec": predict.Nothing,
+			"v":        predict.Nothing,
+			"vettool":  predict.Nothing,
+			"x":        predict.Nothing,
 		},
 		Args: anyGo,
 	}
@@ -138,6 +143,7 @@ func main() {
 	list := &complete.Command{
 		Flags: map[string]complete.Predictor{
 			"e":    predict.Nothing,
+			"m":    predict.Nothing,
 			"f":    predict.Something,
 			"json": predict.Nothing,
 		},
@@ -686,6 +692,16 @@ func main() {
 		},
 	}
 
+	workHelp := &complete.Command{
+		Sub: map[string]*complete.Command{
+			"edit":   {},
+			"init":   {},
+			"sync":   {},
+			"use":    {},
+			"vendor": {},
+		},
+	}
+
 	mod := &complete.Command{
 		Sub: map[string]*complete.Command{
 			"download": modDownload,
@@ -700,40 +716,57 @@ func main() {
 		},
 	}
 
+	work := &complete.Command{
+		Sub: map[string]*complete.Command{
+			"edit":   modEdit,
+			"init":   modInit,
+			"sync":   {},
+			"use":    {},
+			"vendor": modVendor,
+		},
+	}
+
 	help := &complete.Command{
 		Sub: map[string]*complete.Command{
-			"bug":         {},
-			"build":       {},
-			"clean":       {},
-			"doc":         {},
-			"env":         {},
-			"fix":         {},
-			"fmt":         {},
-			"generate":    {},
-			"get":         {},
-			"install":     {},
-			"list":        {},
-			"mod":         modHelp,
-			"run":         {},
-			"test":        {},
-			"tool":        {},
-			"version":     {},
-			"vet":         {},
-			"buildmode":   {},
-			"c":           {},
-			"cache":       {},
-			"environment": {},
-			"filetype":    {},
-			"go.mod":      {},
-			"gopath":      {},
-			"gopath-get":  {},
-			"goproxy":     {},
-			"importpath":  {},
-			"modules":     {},
-			"module-get":  {},
-			"packages":    {},
-			"testflag":    {},
-			"testfunc":    {},
+			"bug":      {},
+			"build":    {},
+			"clean":    {},
+			"doc":      {},
+			"env":      {},
+			"fix":      {},
+			"fmt":      {},
+			"generate": {},
+			"get":      {},
+			"install":  {},
+			"list":     {},
+			"mod":      modHelp,
+			"work":     workHelp,
+			"run":      {},
+			"test":     {},
+			"tool":     {},
+			"version":  {},
+			"vet":      {},
+
+			// Additional help topics
+			"buildconstraint": {},
+			"buildmode":       {},
+			"c":               {},
+			"cache":           {},
+			"environment":     {},
+			"filetype":        {},
+			"go.mod":          {},
+			"gopath":          {},
+			"gopath-get":      {},
+			"goproxy":         {},
+			"importpath":      {},
+			"module-auth":     {},
+			"module-get":      {},
+			"modules":         {},
+			"packages":        {},
+			"private":         {},
+			"testflag":        {},
+			"testfunc":        {},
+			"vcs":             {},
 		},
 	}
 
@@ -765,6 +798,7 @@ func main() {
 			"fix":      fix,
 			"version":  version,
 			"mod":      mod,
+			"work":     work,
 			"help":     help,
 		},
 		Flags: map[string]complete.Predictor{
