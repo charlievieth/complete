@@ -2,7 +2,6 @@ package main
 
 import (
 	"go/build"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -43,7 +42,7 @@ func predictLocalAndSystem(prefix string) []string {
 // and return a list of paths to go packages.
 func listPackages(dir string) (directories []string) {
 	// add subdirectories
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		log.Printf("failed reading directory %s: %s", dir, err)
 		return
